@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { CheckCircle2, Circle, AlertCircle, Clock, ChevronDown, ChevronUp, Trash2, Calendar, Sparkles } from "lucide-react";
+import { CheckCircle2, Circle, AlertCircle, Clock, ChevronDown, ChevronUp, Trash2, Calendar, Sparkles, CheckSquare, Square } from "lucide-react";
 import { Task } from "../types";
 
 interface TaskCardProps {
@@ -9,10 +9,22 @@ interface TaskCardProps {
   onDelete: (id: string) => void;
   onSnooze: (id: string, hours: number) => void;
   onSyncSuccess?: () => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
   key?: any;
 }
 
-export default function TaskCard({ task, onToggleComplete, onDelete, onSnooze, onSyncSuccess }: TaskCardProps) {
+export default function TaskCard({ 
+  task, 
+  onToggleComplete, 
+  onDelete, 
+  onSnooze, 
+  onSyncSuccess,
+  isSelectionMode = false,
+  isSelected = false,
+  onSelect
+}: TaskCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
@@ -22,6 +34,12 @@ export default function TaskCard({ task, onToggleComplete, onDelete, onSnooze, o
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [isSyncingToGoogle, setIsSyncingToGoogle] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
+
+  // AI Smart Reschedule States
+  const [showSmartReschedule, setShowSmartReschedule] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isApplyingReschedule, setIsApplyingReschedule] = useState(false);
+  const [suggestion, setSuggestion] = useState<{ suggestedDeadline: string; rationale: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/google/status")
@@ -33,6 +51,53 @@ export default function TaskCard({ task, onToggleComplete, onDelete, onSnooze, o
       })
       .catch((err) => console.error("Error checking Google Calendar status inside TaskCard:", err));
   }, []);
+
+  const fetchSmartReschedule = async () => {
+    setIsSuggesting(true);
+    setSuggestion(null);
+    try {
+      const res = await fetch("/api/ai/smart-reschedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: task.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSuggestion(data);
+      } else {
+        console.error("Failed to fetch smart reschedule recommendation");
+      }
+    } catch (err) {
+      console.error("Error fetching smart reschedule suggestion:", err);
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const handleApplySmartReschedule = async (newDeadline: string) => {
+    setIsApplyingReschedule(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deadline: newDeadline,
+          aiScore: Math.max(10, (task.aiScore || 50) - 10),
+          aiRecommendation: "Rescheduled by AI to minimize conflict and optimize cognitive focus."
+        }),
+      });
+      if (res.ok) {
+        if (onSyncSuccess) {
+          onSyncSuccess();
+        }
+        setShowSmartReschedule(false);
+      }
+    } catch (err) {
+      console.error("Failed to apply smart reschedule:", err);
+    } finally {
+      setIsApplyingReschedule(false);
+    }
+  };
 
   const handleSyncTask = async () => {
     setIsSyncingToGoogle(true);
@@ -145,14 +210,46 @@ export default function TaskCard({ task, onToggleComplete, onDelete, onSnooze, o
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.2 }}
-      className={`bg-white rounded-xl border ${getPriorityBorder(task.priority)} hover:shadow-md transition-all p-4 mb-3 dark:bg-slate-900 dark:border-slate-800 dark:hover:shadow-indigo-950/10`}
+      initial={{ opacity: 0, x: -16, y: 6 }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      exit={{ opacity: 0, x: 16, scale: 0.95 }}
+      transition={{ 
+        type: "spring",
+        stiffness: 280,
+        damping: 24,
+        mass: 0.8
+      }}
+      className={`bg-white rounded-xl border ${
+        isSelected 
+          ? "border-indigo-500 bg-indigo-50/15 dark:border-indigo-500/50 dark:bg-indigo-950/10 shadow-2xs" 
+          : getPriorityBorder(task.priority)
+      } hover:shadow-md transition-all p-4 mb-3 dark:bg-slate-900 dark:border-slate-800 dark:hover:shadow-indigo-950/10`}
       id={`task-card-${task.id}`}
     >
       <div className="flex items-start justify-between gap-3">
+        {/* Multi-select Checkbox */}
+        {isSelectionMode && (
+          <button
+            type="button"
+            onClick={() => onSelect?.(task.id, !isSelected)}
+            className="mt-1 mr-1 flex-shrink-0 text-slate-400 hover:text-indigo-600 active:scale-90 transition-all cursor-pointer dark:hover:text-indigo-400"
+            id={`select-btn-${task.id}`}
+            title={isSelected ? "Deselect task" : "Select task"}
+          >
+            {isSelected ? (
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 450, damping: 20 }}
+              >
+                <CheckSquare className="w-5.5 h-5.5 text-indigo-600 fill-indigo-50/40 dark:text-indigo-400 dark:fill-indigo-950/20" />
+              </motion.div>
+            ) : (
+              <Square className="w-5.5 h-5.5 text-slate-300 hover:text-indigo-500 dark:text-slate-600 dark:hover:text-indigo-400" />
+            )}
+          </button>
+        )}
+
         {/* Checkbox to Complete */}
         <button
           onClick={() => onToggleComplete(task.id, !task.isCompleted)}
@@ -193,6 +290,13 @@ export default function TaskCard({ task, onToggleComplete, onDelete, onSnooze, o
           <h3 className={`text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-150 ${task.isCompleted ? "line-through text-slate-400 font-normal dark:text-slate-500" : ""}`}>
             {task.title}
           </h3>
+
+          {task.isCompleted && task.completedAt && (
+            <p className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1" id={`completed-at-${task.id}`}>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              Completed: {new Date(task.completedAt).toLocaleDateString([], { month: "short", day: "numeric" })} at {new Date(task.completedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          )}
 
           {task.tags && task.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-1.5" id={`task-tags-container-${task.id}`}>
@@ -248,8 +352,32 @@ export default function TaskCard({ task, onToggleComplete, onDelete, onSnooze, o
             >
               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
+            {!task.isCompleted && (
+              <button
+                onClick={() => {
+                  setShowSmartReschedule(!showSmartReschedule);
+                  setShowSnoozeMenu(false);
+                  if (!showSmartReschedule) {
+                    fetchSmartReschedule();
+                  }
+                }}
+                className={`px-2 py-1 rounded-lg transition-all font-mono text-[10px] font-bold cursor-pointer flex items-center gap-1 border ${
+                  showSmartReschedule
+                    ? "bg-indigo-50 border-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-900/40 dark:text-indigo-300"
+                    : "bg-white border-slate-200/60 hover:bg-indigo-50/40 text-indigo-600 dark:bg-slate-800 dark:border-slate-700/60 dark:text-indigo-400 dark:hover:bg-indigo-950/20"
+                }`}
+                title="AI Smart Reschedule suggestion"
+                id={`smart-reschedule-btn-${task.id}`}
+              >
+                <Sparkles className="w-3 h-3 text-indigo-500" />
+                <span>AI Reschedule</span>
+              </button>
+            )}
             <button
-              onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
+              onClick={() => {
+                setShowSnoozeMenu(!showSnoozeMenu);
+                setShowSmartReschedule(false);
+              }}
               className="p-1.5 hover:bg-slate-100 active:bg-slate-200 text-slate-500 hover:text-indigo-600 rounded-lg transition-colors font-mono text-[11px] font-bold cursor-pointer dark:hover:bg-slate-800 dark:active:bg-slate-700 dark:text-slate-400 dark:hover:text-indigo-400"
               title="Quick Snooze Deadline"
               id={`snooze-btn-${task.id}`}
@@ -267,6 +395,82 @@ export default function TaskCard({ task, onToggleComplete, onDelete, onSnooze, o
           </div>
         </div>
       </div>
+
+      {/* Smart Reschedule Panel */}
+      <AnimatePresence>
+        {showSmartReschedule && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800"
+            id={`smart-reschedule-panel-${task.id}`}
+          >
+            <div className="bg-gradient-to-r from-indigo-50/50 to-purple-50/50 border border-indigo-100/30 p-3 rounded-xl dark:from-indigo-950/10 dark:to-purple-950/10 dark:border-indigo-950/40">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">AI Cognitive Slot Finder</span>
+              </div>
+              
+              {isSuggesting ? (
+                <div className="flex items-center gap-2 py-2 text-slate-500 dark:text-slate-400">
+                  <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs font-semibold">Analyzing commitments & finding best slot...</span>
+                </div>
+              ) : suggestion ? (
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white/80 p-2.5 rounded-lg border border-slate-100 dark:bg-slate-900/60 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-emerald-500 animate-pulse" />
+                      <div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Suggested Slot</div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {new Date(suggestion.suggestedDeadline).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} at {new Date(suggestion.suggestedDeadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      disabled={isApplyingReschedule}
+                      onClick={() => handleApplySmartReschedule(suggestion.suggestedDeadline)}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm hover:shadow transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1 dark:bg-indigo-500 dark:hover:bg-indigo-650"
+                    >
+                      {isApplyingReschedule ? "Applying..." : "Accept Slot"}
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 font-medium italic">
+                    "{suggestion.rationale}"
+                  </p>
+                </div>
+              ) : (
+                <div className="text-xs text-rose-500 font-semibold py-1">
+                  Could not retrieve reschedule recommendation. Please try again.
+                </div>
+              )}
+
+              <div className="mt-2.5 flex justify-end gap-2 border-t border-slate-100/50 pt-2 dark:border-slate-800/30">
+                <button
+                  type="button"
+                  onClick={fetchSmartReschedule}
+                  disabled={isSuggesting}
+                  className="px-2 py-1 text-[10px] font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-colors cursor-pointer dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-750"
+                >
+                  Recalculate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSmartReschedule(false)}
+                  className="px-2 py-1 text-[10px] font-bold bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 rounded-lg transition-colors cursor-pointer dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-850"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Snooze Dropdown Panel */}
       <AnimatePresence>

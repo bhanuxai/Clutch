@@ -241,6 +241,46 @@ app.delete("/api/tasks/:id", (req, res) => {
   res.json({ success: true });
 });
 
+// POST batch tasks actions
+app.post("/api/tasks/batch", (req, res) => {
+  const { ids, action, updates } = req.body;
+  if (!Array.isArray(ids) || !ids.length || !action) {
+    res.status(400).json({ error: "ids (array) and action are required" });
+    return;
+  }
+  const data = loadData();
+  if (action === "complete") {
+    const completedAt = new Date().toISOString();
+    data.tasks = data.tasks.map((t) => {
+      if (ids.includes(t.id)) {
+        return { ...t, isCompleted: true, completedAt };
+      }
+      return t;
+    });
+  } else if (action === "incomplete") {
+    data.tasks = data.tasks.map((t) => {
+      if (ids.includes(t.id)) {
+        return { ...t, isCompleted: false, completedAt: undefined };
+      }
+      return t;
+    });
+  } else if (action === "delete") {
+    data.tasks = data.tasks.filter((t) => !ids.includes(t.id));
+  } else if (action === "update" && updates) {
+    data.tasks = data.tasks.map((t) => {
+      if (ids.includes(t.id)) {
+        return { ...t, ...updates };
+      }
+      return t;
+    });
+  } else {
+    res.status(400).json({ error: "Invalid action" });
+    return;
+  }
+  saveData(data);
+  res.json({ success: true });
+});
+
 // POST habit
 app.post("/api/habits", (req, res) => {
   const { title, category } = req.body;
@@ -521,6 +561,123 @@ app.post("/api/ai/schedule", async (req, res) => {
     data.itinerary = simItinerary;
     saveData(data);
     res.json({ itinerary: simItinerary });
+  }
+});
+
+// POST AI Smart Reschedule for a specific task
+app.post("/api/ai/smart-reschedule", async (req, res) => {
+  const { taskId } = req.body;
+  if (!taskId) {
+    res.status(400).json({ error: "taskId is required" });
+    return;
+  }
+
+  const data = loadData();
+  const task = data.tasks.find(t => t.id === taskId);
+  if (!task) {
+    res.status(404).json({ error: "Task not found" });
+    return;
+  }
+
+  const otherActiveTasks = data.tasks.filter(t => !t.isCompleted && t.id !== taskId);
+  const currentLocalTime = new Date().toISOString();
+
+  if (!ai) {
+    // Advanced Heuristic/simulation Fallback
+    const suggestedDate = new Date();
+    // Default to tomorrow at 14:00
+    suggestedDate.setDate(suggestedDate.getDate() + 1);
+    suggestedDate.setHours(14, 0, 0, 0);
+
+    // Let's shift it if there is a close conflict
+    let conflictFound = true;
+    let attempts = 0;
+    while (conflictFound && attempts < 7) {
+      conflictFound = otherActiveTasks.some(t => {
+        const tDate = new Date(t.deadline);
+        const diffHours = Math.abs(tDate.getTime() - suggestedDate.getTime()) / (1000 * 60 * 60);
+        return diffHours < 1.5; // Conflict if deadlines are within 1.5 hours of each other
+      });
+      if (conflictFound) {
+        // Shift by 3 hours
+        suggestedDate.setHours(suggestedDate.getHours() + 3);
+        if (suggestedDate.getHours() >= 19) {
+          // If too late, move to next day 10:00 AM
+          suggestedDate.setDate(suggestedDate.getDate() + 1);
+          suggestedDate.setHours(10, 0, 0, 0);
+        }
+      }
+      attempts++;
+    }
+
+    const isoString = suggestedDate.toISOString();
+    const formattedTime = suggestedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formattedDate = suggestedDate.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
+    res.json({
+      suggestedDeadline: isoString,
+      rationale: `Heuristic check: Evaluated ${otherActiveTasks.length} commitments. Rescheduled to ${formattedDate} at ${formattedTime} to avoid overlap.`
+    });
+    return;
+  }
+
+  try {
+    const prompt = `
+      You are the master coordinator for a procrastination-shielded planner called "Clutch".
+      The user wants to find an optimal, less conflicting time slot (date & time) to reschedule a specific task.
+      
+      Task to Reschedule:
+      - Title: "${task.title}"
+      - Category: "${task.category}"
+      - Priority: "${task.priority}"
+      - Estimated Duration: ${task.estimatedMinutes} minutes
+      - Current Deadline: ${task.deadline}
+      - Notes: "${task.notes || ''}"
+
+      Other Commitments/Tasks in queue (avoid scheduling close to these deadlines):
+      ${JSON.stringify(otherActiveTasks.map(t => ({ title: t.title, category: t.category, priority: t.priority, deadline: t.deadline, estimatedMinutes: t.estimatedMinutes })))}
+
+      Current Time: ${currentLocalTime}
+
+      Suggest an optimal, non-conflicting deadline within the next 7 days.
+      The slot should:
+      - Be during reasonable working hours (between 08:00 and 19:00).
+      - Avoid conflicting with existing tasks (leave a buffer of at least 1.5 hours before and after other deadlines).
+      - Match the style/urgency of the task.
+
+      Return a JSON object with:
+      - "suggestedDeadline": string, an ISO-8601 string of the suggested date and time (e.g., "2026-06-30T14:30:00.000Z")
+      - "rationale": string, a brief, encouraging 1-2 sentence explanation of why this slot was selected.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            suggestedDeadline: { type: Type.STRING },
+            rationale: { type: Type.STRING }
+          },
+          required: ["suggestedDeadline", "rationale"]
+        }
+      }
+    });
+
+    const resultText = response.text || "{}";
+    const suggestion = JSON.parse(resultText);
+    res.json(suggestion);
+  } catch (error: any) {
+    console.error("Gemini smart-reschedule suggestions failed:", error);
+    const fallbackDate = new Date();
+    fallbackDate.setDate(fallbackDate.getDate() + 1);
+    fallbackDate.setHours(15, 0, 0, 0);
+    res.json({
+      suggestedDeadline: fallbackDate.toISOString(),
+      rationale: "Rescheduled to tomorrow afternoon. This slot avoids high-density morning tasks and provides a calm, clear focus window."
+    });
   }
 });
 

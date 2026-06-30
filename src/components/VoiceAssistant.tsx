@@ -25,6 +25,12 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
 
+  // Web Speech API - Voice Dictation & Continuous Listening
+  const [isListening, setIsListening] = useState(false);
+  const [continuousListening, setContinuousListening] = useState(false);
+  const [speechSupportedByBrowser, setSpeechSupportedByBrowser] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,10 +38,116 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
   }, [messages, isTyping]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      setSpeechSupported(true);
+    if (typeof window !== "undefined") {
+      if ("speechSynthesis" in window) {
+        setSpeechSupported(true);
+      }
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        setSpeechSupportedByBrowser(true);
+      }
     }
   }, []);
+
+  // Split and process transcripts for continuous multi-task creation
+  const processTranscript = async (text: string) => {
+    const rawSegments = text.split(/\s+next\s+task\s+/i);
+    let segments: string[] = [];
+
+    for (const rawSeg of rawSegments) {
+      const andParts = rawSeg.split(/\s+and\s+/i);
+      if (andParts.length > 1) {
+        segments.push(andParts[0].trim());
+        for (let i = 1; i < andParts.length; i++) {
+          const part = andParts[i].trim();
+          const hasActionPrefix = /^(add|need to|complete|snooze|schedule|delete|remove|finish|do|pay|buy|study|clean|work)/i.test(part);
+          if (hasActionPrefix) {
+            segments.push(part);
+          } else {
+            if (segments.length > 0) {
+              segments[segments.length - 1] += " and " + part;
+            } else {
+              segments.push(part);
+            }
+          }
+        }
+      } else {
+        segments.push(rawSeg.trim());
+      }
+    }
+
+    segments = segments.map(s => s.trim()).filter(Boolean);
+    if (segments.length === 0) return;
+
+    for (const segment of segments) {
+      let processedSegment = segment;
+      const originalHasAdd = /^(add|need\s+to)/i.test(text);
+      const segmentHasAdd = /^(add|need\s+to)/i.test(segment);
+      if (originalHasAdd && !segmentHasAdd) {
+        processedSegment = "add " + segment;
+      }
+      await handleSend(processedSegment);
+    }
+  };
+
+  const toggleSpeechRecognition = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Web Speech API is not supported in this browser. Please use the Voice Simulation button instead.");
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = continuousListening;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        if (transcript.trim()) {
+          if (continuousListening) {
+            processTranscript(transcript);
+          } else {
+            setInputText(transcript);
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error("Speech Recognition Error:", event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        if (continuousListening && isListening) {
+          try {
+            recognition.start();
+          } catch (e) {
+            console.log("Could not auto-restart voice recognition", e);
+          }
+        }
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error("Failed to start Speech Recognition:", err);
+    }
+  };
 
   const handleSpeech = (text: string) => {
     if (!speechSupported) return;
@@ -62,6 +174,13 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
 
     if (!textToSend) {
       setInputText("");
+    }
+
+    // Split on continuous listening multi-task markers if text is sent from primary user bar
+    const hasMultipleTasks = /\s+next\s+task\s+/i.test(text) || (/\s+and\s+/i.test(text) && /^(add|need\s+to)/i.test(text));
+    if (continuousListening && !textToSend && hasMultipleTasks) {
+      await processTranscript(text);
+      return;
     }
 
     const userMsgId = "msg-" + Date.now();
@@ -124,19 +243,39 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
   };
 
   const handleVoiceSimulation = () => {
-    // Provide some quick templates representing speech dictation to prevent typing friction
     const templates = [
       "add complete math assignment by tonight study priority high",
       "I am extremely stressed and overwhelmed with work",
       "add pay car insurance bills priority medium",
       "snooze CS 101 Midterm draft by 3 hours please",
     ];
-    const chosen = templates[Math.floor(Math.random() * templates.length)];
+
+    const continuousTemplates = [
+      "add prepare chemistry presentation by 5pm study priority high next task add schedule client meeting and add pay electricity bill priority low",
+      "add buy groceries and add wash the car next task add draft project scope by tomorrow priority high",
+      "add submit tax documents next task add book dentist appointment by next week priority medium and add walk the dog",
+    ];
+
+    const chosenList = continuousListening ? continuousTemplates : templates;
+    const chosen = chosenList[Math.floor(Math.random() * chosenList.length)];
+    
     setInputText(chosen);
+    
+    if (continuousListening) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: "sys-hint-" + Date.now(),
+          sender: "ai",
+          text: "🎤 Continuous Voice Simulation Loaded! Hit the Send button to watch me split this sentence and add multiple separate tasks sequentially.",
+          isAction: true,
+        }
+      ]);
+    }
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex flex-col h-[400px] dark:bg-slate-900 dark:border-slate-800" id="voice-assistant-panel">
+    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex flex-col h-[440px] dark:bg-slate-900 dark:border-slate-800" id="voice-assistant-panel">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-50 flex-shrink-0 dark:border-slate-800/60">
         <div className="flex items-center gap-2.5">
@@ -214,6 +353,63 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
           </div>
         )}
         <div ref={messagesEndRef} />
+      </div>
+
+      {/* Voice controls & Continuous Listening toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2.5 mb-2.5 bg-slate-50/50 rounded-xl border border-slate-100/40 dark:bg-slate-850/20 dark:border-slate-800/40 text-xs flex-shrink-0" id="continuous-listening-controls">
+        <div className="flex items-center gap-2">
+          {/* Real Mic Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleSpeechRecognition}
+            className={`px-2 py-1 rounded-lg border text-[10px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              isListening
+                ? "bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-900/40 dark:text-emerald-400"
+                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-750"
+            }`}
+            id="voice-mic-toggle-btn"
+          >
+            {isListening ? (
+              <>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Listening...
+              </>
+            ) : (
+              <>
+                <Mic className="w-3 h-3 text-slate-400" />
+                Start Mic
+              </>
+            )}
+          </button>
+
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+            {isListening ? "Speak now" : speechSupportedByBrowser ? "Standard voice add" : "Mic (simulation fallback)"}
+          </span>
+        </div>
+
+        {/* Continuous Listening Toggle Switch */}
+        <div className="flex items-center gap-2">
+          <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none" htmlFor="continuous-listening-toggle">
+            Continuous Listening
+          </label>
+          <button
+            type="button"
+            id="continuous-listening-toggle"
+            onClick={() => setContinuousListening(!continuousListening)}
+            className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              continuousListening ? "bg-indigo-600 dark:bg-indigo-500" : "bg-slate-200 dark:bg-slate-800"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                continuousListening ? "translate-x-3.5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Input container */}

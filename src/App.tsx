@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { PlusCircle, Calendar, ClipboardList, Zap, ArrowRight, Shield, CheckCircle2, Search, X, FolderTree, ChevronDown, ChevronRight, Download, Bell, BellOff } from "lucide-react";
+import { PlusCircle, Calendar, ClipboardList, Zap, ArrowRight, Shield, CheckCircle2, Search, X, FolderTree, ChevronDown, ChevronRight, Download, Bell, BellOff, History, CheckSquare, Square, Trash2, RefreshCw } from "lucide-react";
 
 import Header from "./components/Header";
 import TaskCard from "./components/TaskCard";
@@ -14,6 +14,16 @@ import WeeklyActivity from "./components/WeeklyActivity";
 import { EmptyPendingIllustration, EmptyCompletedIllustration, EmptySearchIllustration } from "./components/EmptyStateIllustration";
 
 import { Task, Habit, ItineraryItem, AppData } from "./types";
+
+const KEYWORD_MAP: { [key: string]: string[] } = {
+  work: ["work", "office", "job", "meeting", "corp", "client", "team", "project", "boss"],
+  urgent: ["urgent", "asap", "emergency", "fast", "priority", "critical", "clutch", "soon", "immediate", "deadline"],
+  home: ["home", "house", "cleaning", "grocery", "groceries", "kitchen", "family", "personal", "parent"],
+  study: ["study", "exam", "quiz", "class", "lecture", "homework", "learn", "read", "course", "school", "assignment"],
+  finance: ["bill", "invoice", "pay", "money", "rent", "credit", "tax", "finance", "payment", "bank"],
+  review: ["review", "check", "verify", "audit", "draft", "test", "inspect", "feedback"],
+  health: ["health", "gym", "workout", "doctor", "dentist", "meds", "exercise", "run", "medication", "fitness"]
+};
 
 export default function App() {
   // Theme State
@@ -141,6 +151,58 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
+  // Recent Searches dropdown states and persistent cache
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("recentSearches");
+      return saved ? JSON.parse(saved) : ["#urgent", "homework", "bills", "study"];
+    } catch {
+      return ["#urgent", "homework", "bills", "study"];
+    }
+  });
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Multi-select / Batch Actions Mode
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [confirmDeleteBatch, setConfirmDeleteBatch] = useState(false);
+
+  const addRecentSearch = (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    setRecentSearches((prev) => {
+      const filtered = prev.filter((q) => q.toLowerCase() !== trimmed.toLowerCase());
+      const updated = [trimmed, ...filtered].slice(0, 6);
+      try {
+        localStorage.setItem("recentSearches", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to write to localStorage:", e);
+      }
+      return updated;
+    });
+  };
+
+  const removeRecentSearch = (queryToRemove: string) => {
+    setRecentSearches((prev) => {
+      const updated = prev.filter((q) => q !== queryToRemove);
+      try {
+        localStorage.setItem("recentSearches", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to write to localStorage:", e);
+      }
+      return updated;
+    });
+  };
+
+  const clearAllRecentSearches = () => {
+    setRecentSearches([]);
+    try {
+      localStorage.setItem("recentSearches", JSON.stringify([]));
+    } catch (e) {
+      console.error("Failed to write to localStorage:", e);
+    }
+  };
+
   // Group by category options
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
@@ -180,6 +242,23 @@ export default function App() {
     notes: "",
     tagsInput: "",
   });
+
+  // Calculate automatically suggested tags based on notes field keyword matching
+  const suggestedTags = React.useMemo(() => {
+    const notesLower = formData.notes.toLowerCase();
+    const suggestions: string[] = [];
+    
+    if (!notesLower.trim()) return suggestions;
+
+    Object.entries(KEYWORD_MAP).forEach(([tag, keywords]) => {
+      const hasKeyword = keywords.some(keyword => notesLower.includes(keyword));
+      if (hasKeyword) {
+        suggestions.push(tag);
+      }
+    });
+
+    return suggestions;
+  }, [formData.notes]);
 
   // Fetch initial data from server
   const fetchData = async (showPulseSync = false) => {
@@ -241,6 +320,69 @@ export default function App() {
       fetchData(true);
     } catch (err) {
       console.error("Task deletion sync failed:", err);
+    }
+  };
+
+  const handleSelectTask = (id: string, selected: boolean) => {
+    setSelectedTaskIds((prev) => {
+      if (selected) {
+        return [...prev, id];
+      } else {
+        return prev.filter((item) => item !== id);
+      }
+    });
+  };
+
+  const handleBatchToggleComplete = async (isCompleted: boolean) => {
+    if (selectedTaskIds.length === 0) return;
+    try {
+      const completedAt = isCompleted ? new Date().toISOString() : undefined;
+      // Optimistic update
+      setTasks((prev) =>
+        prev.map((t) =>
+          selectedTaskIds.includes(t.id) ? { ...t, isCompleted, completedAt } : t
+        )
+      );
+
+      // Call our newly created server batch endpoint
+      await fetch("/api/tasks/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: selectedTaskIds,
+          action: isCompleted ? "complete" : "incomplete"
+        })
+      });
+
+      setSelectedTaskIds([]);
+      setIsSelectionMode(false);
+      fetchData(true);
+    } catch (err) {
+      console.error("Batch toggle complete failed:", err);
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedTaskIds.length === 0) return;
+    try {
+      // Optimistic update
+      setTasks((prev) => prev.filter((t) => !selectedTaskIds.includes(t.id)));
+
+      // Call batch endpoint
+      await fetch("/api/tasks/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: selectedTaskIds,
+          action: "delete"
+        })
+      });
+
+      setSelectedTaskIds([]);
+      setIsSelectionMode(false);
+      fetchData(true);
+    } catch (err) {
+      console.error("Batch deletion failed:", err);
     }
   };
 
@@ -774,6 +916,55 @@ export default function App() {
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 font-medium focus:outline-none focus:border-indigo-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:focus:border-indigo-500"
                       />
+                      {suggestedTags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5 items-center bg-slate-50/60 p-2 rounded-xl border border-slate-100/60 dark:bg-slate-800/10 dark:border-slate-800/30" id="suggested-tags-wrapper">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1 dark:text-slate-500">Suggested tags:</span>
+                          {suggestedTags.map((tag) => {
+                            const currentTags = formData.tagsInput
+                              .split(/[\s,]+/)
+                              .map(t => t.trim().replace(/^#+/, "").toLowerCase())
+                              .filter(Boolean);
+                            const isSelected = currentTags.includes(tag.toLowerCase());
+
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => {
+                                  const rawTags = formData.tagsInput
+                                    .split(/[\s,]+/)
+                                    .map(t => t.trim())
+                                    .filter(Boolean);
+
+                                  let nextTags;
+                                  if (isSelected) {
+                                    nextTags = rawTags.filter(
+                                      t => t.replace(/^#+/, "").toLowerCase() !== tag.toLowerCase()
+                                    );
+                                  } else {
+                                    nextTags = [...rawTags, `#${tag}`];
+                                  }
+                                  
+                                  // Re-serialize back to a clean comma-separated list
+                                  const nextTagsInput = nextTags
+                                    .map(t => t.startsWith("#") ? t : `#${t}`)
+                                    .join(", ");
+
+                                  setFormData({ ...formData, tagsInput: nextTagsInput });
+                                }}
+                                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer border flex items-center gap-0.5 ${
+                                  isSelected
+                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs dark:bg-indigo-500 dark:border-indigo-500"
+                                    : "bg-white text-slate-600 hover:bg-slate-50 border-slate-200/80 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-750"
+                                }`}
+                              >
+                                <span>#{tag}</span>
+                                {isSelected && <span className="text-[8px]">✓</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     {/* Row 6: Custom Tags */}
@@ -818,9 +1009,20 @@ export default function App() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => {
+                    // Slight delay to allow clicking options before focus is lost
+                    setTimeout(() => setIsSearchFocused(false), 200);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && searchQuery.trim()) {
+                      addRecentSearch(searchQuery);
+                    }
+                  }}
                   placeholder="Filter deadlines by title or notes..."
                   className="w-full pl-9 pr-9 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200/80 focus:border-indigo-500 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all dark:bg-slate-800 dark:hover:bg-slate-750 dark:focus:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:focus:ring-indigo-950/40 dark:placeholder-slate-500"
                   id="task-search-input"
+                  autoComplete="off"
                 />
                 {searchQuery && (
                   <button
@@ -832,6 +1034,63 @@ export default function App() {
                     <X className="h-4 w-4" />
                   </button>
                 )}
+
+                {/* Recent Searches Dropdown */}
+                <AnimatePresence>
+                  {isSearchFocused && recentSearches.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                      onMouseDown={(e) => e.preventDefault()} // Prevents losing focus on mouse down
+                      className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200/90 rounded-xl shadow-xl z-50 py-2.5 overflow-hidden dark:bg-slate-900 dark:border-slate-800"
+                      id="recent-searches-dropdown"
+                    >
+                      <div className="flex items-center justify-between px-3 pb-1.5 border-b border-slate-50 dark:border-slate-800/60 mb-1.5">
+                        <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500">
+                          <History className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Recent Searches</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={clearAllRecentSearches}
+                          className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto space-y-0.5 px-1.5">
+                        {recentSearches.map((query) => (
+                          <div
+                            key={query}
+                            className="group flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-850/60 transition-colors"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSearchQuery(query);
+                                addRecentSearch(query);
+                                setIsSearchFocused(false);
+                              }}
+                              className="flex-1 text-left text-xs text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold cursor-pointer truncate mr-2"
+                            >
+                              {query}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeRecentSearch(query)}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition-all cursor-pointer"
+                              title="Remove from history"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Custom Tag Filter Pills */}
@@ -920,8 +1179,131 @@ export default function App() {
                     <FolderTree className="w-3.5 h-3.5" />
                     Group by Category
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSelectionMode(!isSelectionMode);
+                      setSelectedTaskIds([]);
+                      setConfirmDeleteBatch(false);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
+                      isSelectionMode
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-xs dark:bg-indigo-500 dark:border-indigo-500"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-750"
+                    }`}
+                    id="toggle-selection-mode"
+                    title="Enable multi-select mode to perform batch actions"
+                  >
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    {isSelectionMode ? "Exit Select Mode" : "Select Multiple"}
+                  </button>
                 </div>
               </div>
+
+              {/* Batch Actions Bar */}
+              <AnimatePresence>
+                {isSelectionMode && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: "auto" }}
+                    exit={{ opacity: 0, y: -10, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="mb-4 overflow-hidden"
+                    id="batch-actions-container"
+                  >
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 dark:bg-slate-850/40 dark:border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-extrabold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                            {selectedTaskIds.length}
+                          </span>
+                          <span>Selected</span>
+                        </div>
+                        
+                        <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentTasks = activeTab === "pending" ? pendingTasks : completedTasks;
+                            const currentIds = currentTasks.map((t) => t.id);
+                            const allSelected = currentIds.every((id) => selectedTaskIds.includes(id));
+                            if (allSelected) {
+                              setSelectedTaskIds((prev) => prev.filter((id) => !currentIds.includes(id)));
+                            } else {
+                              setSelectedTaskIds((prev) => Array.from(new Set([...prev, ...currentIds])));
+                            }
+                          }}
+                          className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+                        >
+                          {(activeTab === "pending" ? pendingTasks : completedTasks).every((t) => selectedTaskIds.includes(t.id)) ? "Deselect All" : "Select All"}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {activeTab === "pending" ? (
+                          <button
+                            type="button"
+                            disabled={selectedTaskIds.length === 0}
+                            onClick={() => handleBatchToggleComplete(true)}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:pointer-events-none rounded-xl text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center gap-1.5 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Mark Completed
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={selectedTaskIds.length === 0}
+                            onClick={() => handleBatchToggleComplete(false)}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:pointer-events-none rounded-xl text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center gap-1.5 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Mark Active
+                          </button>
+                        )}
+
+                        {confirmDeleteBatch ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleBatchDelete();
+                              setConfirmDeleteBatch(false);
+                            }}
+                            onBlur={() => setTimeout(() => setConfirmDeleteBatch(false), 2000)}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center gap-1.5 animate-pulse"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Confirm Delete?
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={selectedTaskIds.length === 0}
+                            onClick={() => setConfirmDeleteBatch(true)}
+                            className="px-3 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:pointer-events-none rounded-xl text-xs font-bold shadow-3xs hover:shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 dark:bg-slate-800 dark:border-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-950/20"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete Selected
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSelectionMode(false);
+                            setSelectedTaskIds([]);
+                          }}
+                          className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold shadow-3xs hover:shadow-2xs transition-all cursor-pointer dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-650"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Task Cards Stack */}
               <div className="space-y-1" id="tasks-stack">
@@ -932,7 +1314,18 @@ export default function App() {
                         const details = getCategoryDetail(category);
                         const isCollapsed = !!collapsedCategories[category];
                         return (
-                           <div key={category} className="mb-4 bg-slate-50/40 rounded-2xl border border-slate-100/70 p-3.5 transition-all dark:bg-slate-850/20 dark:border-slate-800/60" id={`category-group-${category}`}>
+                           <motion.div
+                             layout="position"
+                             key={category}
+                             className="mb-4 bg-slate-50/40 rounded-2xl border border-slate-100/70 p-3.5 transition-all dark:bg-slate-850/20 dark:border-slate-800/60"
+                             id={`category-group-${category}`}
+                             transition={{
+                               type: "spring",
+                               stiffness: 280,
+                               damping: 28,
+                               mass: 0.8
+                             }}
+                           >
                             {/* Category Header (collapsible toggle) */}
                             <button
                               type="button"
@@ -959,6 +1352,10 @@ export default function App() {
                                   initial={{ opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: "auto" }}
                                   exit={{ opacity: 0, height: 0 }}
+                                  transition={{ 
+                                    height: { type: "spring", stiffness: 220, damping: 26 },
+                                    opacity: { duration: 0.15 }
+                                  }}
                                   className="space-y-1 mt-2.5 overflow-hidden"
                                 >
                                   {catTasks.map((task) => (
@@ -969,12 +1366,15 @@ export default function App() {
                                       onDelete={handleDeleteTask}
                                       onSnooze={handleSnoozeTask}
                                       onSyncSuccess={() => fetchData(true)}
+                                      isSelectionMode={isSelectionMode}
+                                      isSelected={selectedTaskIds.includes(task.id)}
+                                      onSelect={handleSelectTask}
                                     />
                                   ))}
                                 </motion.div>
                               )}
                             </AnimatePresence>
-                          </div>
+                          </motion.div>
                         );
                       })
                     ) : searchQuery ? (
@@ -1026,6 +1426,9 @@ export default function App() {
                           onDelete={handleDeleteTask}
                           onSnooze={handleSnoozeTask}
                           onSyncSuccess={() => fetchData(true)}
+                          isSelectionMode={isSelectionMode}
+                          isSelected={selectedTaskIds.includes(task.id)}
+                          onSelect={handleSelectTask}
                         />
                       ))
                     ) : searchQuery ? (
@@ -1057,6 +1460,9 @@ export default function App() {
                           onDelete={handleDeleteTask}
                           onSnooze={handleSnoozeTask}
                           onSyncSuccess={() => fetchData(true)}
+                          isSelectionMode={isSelectionMode}
+                          isSelected={selectedTaskIds.includes(task.id)}
+                          onSelect={handleSelectTask}
                         />
                       ))
                     ) : searchQuery ? (

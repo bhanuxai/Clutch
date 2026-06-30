@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Cloud, RefreshCw, AlertTriangle, Clock, Sun, Moon } from "lucide-react";
 import { Task } from "../types";
 
@@ -131,19 +132,41 @@ export default function Header({ tasks, isSyncing, onSync, theme, onToggleTheme 
           </button>
 
           {/* Theme Toggle Button */}
-          <button
+          <motion.button
             type="button"
             onClick={onToggleTheme}
-            className="flex items-center justify-center p-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200/60 rounded-lg text-slate-600 transition-all cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-300"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
+            className="flex items-center justify-center p-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200/60 rounded-lg text-slate-600 transition-colors cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-300 overflow-hidden"
             id="theme-toggle-btn"
             title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
-            {theme === "dark" ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-indigo-500" />
-            )}
-          </button>
+            <AnimatePresence mode="wait" initial={false}>
+              {theme === "dark" ? (
+                <motion.div
+                  key="dark"
+                  initial={{ y: -12, rotate: -90, opacity: 0, scale: 0.5 }}
+                  animate={{ y: 0, rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: 12, rotate: 90, opacity: 0, scale: 0.5 }}
+                  transition={{ type: "spring", stiffness: 380, damping: 20 }}
+                  className="flex items-center justify-center"
+                >
+                  <Sun className="w-4 h-4 text-amber-400" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="light"
+                  initial={{ y: -12, rotate: -90, opacity: 0, scale: 0.5 }}
+                  animate={{ y: 0, rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: 12, rotate: 90, opacity: 0, scale: 0.5 }}
+                  transition={{ type: "spring", stiffness: 380, damping: 20 }}
+                  className="flex items-center justify-center"
+                >
+                  <Moon className="w-4 h-4 text-indigo-500" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </div>
       </div>
 
