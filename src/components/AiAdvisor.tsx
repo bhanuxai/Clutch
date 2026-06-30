@@ -26,16 +26,16 @@ export default function AiAdvisor({
   const stableCount = activeTasks.filter((t) => (t.aiScore || 50) < 50).length;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm mb-6" id="ai-advisor-panel">
+    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm mb-6 dark:bg-slate-900 dark:border-slate-800" id="ai-advisor-panel">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 mb-5 border-b border-slate-50 pb-4">
+      <div className="flex items-center justify-between gap-4 mb-5 border-b border-slate-50 pb-4 dark:border-slate-800/60">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
+          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/60">
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
           <div>
-            <h2 className="font-display text-lg font-bold text-slate-950">AI Life Saver Hub</h2>
-            <p className="text-xs text-slate-400 font-medium">Prioritize, plan, and execute before it's too late</p>
+            <h2 className="font-display text-lg font-bold text-slate-950 dark:text-slate-50">AI Life Saver Hub</h2>
+            <p className="text-xs text-slate-400 font-medium dark:text-slate-400">Prioritize, plan, and execute before it's too late</p>
           </div>
         </div>
 
@@ -43,7 +43,7 @@ export default function AiAdvisor({
         <button
           onClick={onPrioritize}
           disabled={isPrioritizing}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 text-white text-xs font-bold rounded-xl shadow-sm shadow-indigo-100 transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 text-white text-xs font-bold rounded-xl shadow-sm shadow-indigo-100 dark:shadow-none transition-all cursor-pointer"
           id="recalculate-priorities-btn"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isPrioritizing ? "animate-spin" : ""}`} />
@@ -52,10 +52,10 @@ export default function AiAdvisor({
       </div>
 
       {/* General Advice */}
-      <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mb-5 text-slate-700 text-xs sm:text-sm leading-relaxed font-medium flex items-start gap-3">
+      <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mb-5 text-slate-700 text-xs sm:text-sm leading-relaxed font-medium flex items-start gap-3 dark:bg-slate-800/40 dark:border-slate-800 dark:text-slate-300">
         <AlertCircle className="w-5 h-5 text-indigo-500 mt-0.5 flex-shrink-0" />
         <div>
-          <span className="font-bold text-slate-900 block mb-0.5 text-xs uppercase tracking-wider text-indigo-600">Daily Advisor Update</span>
+          <span className="font-bold text-slate-900 block mb-0.5 text-xs uppercase tracking-wider text-indigo-600 dark:text-slate-200">Daily Advisor Update</span>
           {generalAdvice || "Awaiting task list analysis. Click 'AI Prioritize' to get tailored planning insights."}
         </div>
       </div>
@@ -63,75 +63,75 @@ export default function AiAdvisor({
       {/* Bento Grid: Heatmap and Shield Button */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Heatmap Widget */}
-        <div className="bg-slate-50/50 border border-slate-100 p-4 rounded-xl flex flex-col justify-between">
+        <div className="bg-slate-50/50 border border-slate-100 p-4 rounded-xl flex flex-col justify-between dark:bg-slate-800/20 dark:border-slate-850/60">
           <div>
-            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5 dark:text-slate-450">
               <Layers className="w-3.5 h-3.5" />
               AI Cognitive Heatmap
             </h3>
-            <p className="text-xs text-slate-500 font-medium mb-3">Threat metrics based on consequence & time left.</p>
+            <p className="text-xs text-slate-500 font-medium mb-3 dark:text-slate-400">Threat metrics based on consequence & time left.</p>
           </div>
 
           <div className="flex items-end justify-between gap-2.5 pt-2">
             {/* Critical */}
             <div className="flex-grow flex flex-col items-center">
-              <div className="w-full bg-rose-100 h-10 rounded-lg relative overflow-hidden flex items-end">
+              <div className="w-full bg-rose-100 h-10 rounded-lg relative overflow-hidden flex items-end dark:bg-rose-950/40">
                 <div 
                   className="w-full bg-rose-500 transition-all duration-500" 
                   style={{ height: activeTasks.length > 0 ? `${(criticalCount / activeTasks.length) * 100}%` : "0%" }}
                 ></div>
-                <span className="absolute inset-0 flex items-center justify-center font-mono font-bold text-rose-800 text-sm">
+                <span className="absolute inset-0 flex items-center justify-center font-mono font-bold text-rose-800 text-sm dark:text-rose-300">
                   {criticalCount}
                 </span>
               </div>
-              <span className="text-[10px] font-bold text-slate-500 mt-1 uppercase">Critical</span>
+              <span className="text-[10px] font-bold text-slate-500 mt-1 uppercase dark:text-slate-400">Critical</span>
             </div>
 
             {/* Warning */}
             <div className="flex-grow flex flex-col items-center">
-              <div className="w-full bg-amber-100 h-10 rounded-lg relative overflow-hidden flex items-end">
+              <div className="w-full bg-amber-100 h-10 rounded-lg relative overflow-hidden flex items-end dark:bg-amber-950/30">
                 <div 
                   className="w-full bg-amber-500 transition-all duration-500" 
                   style={{ height: activeTasks.length > 0 ? `${(warningCount / activeTasks.length) * 100}%` : "0%" }}
                 ></div>
-                <span className="absolute inset-0 flex items-center justify-center font-mono font-bold text-amber-800 text-sm">
+                <span className="absolute inset-0 flex items-center justify-center font-mono font-bold text-amber-800 text-sm dark:text-amber-300">
                   {warningCount}
                 </span>
               </div>
-              <span className="text-[10px] font-bold text-slate-500 mt-1 uppercase">Warning</span>
+              <span className="text-[10px] font-bold text-slate-500 mt-1 uppercase dark:text-slate-400">Warning</span>
             </div>
 
             {/* Stable */}
             <div className="flex-grow flex flex-col items-center">
-              <div className="w-full bg-slate-200 h-10 rounded-lg relative overflow-hidden flex items-end">
+              <div className="w-full bg-slate-200 h-10 rounded-lg relative overflow-hidden flex items-end dark:bg-slate-800">
                 <div 
                   className="w-full bg-slate-500 transition-all duration-500" 
                   style={{ height: activeTasks.length > 0 ? `${(stableCount / activeTasks.length) * 100}%` : "0%" }}
                 ></div>
-                <span className="absolute inset-0 flex items-center justify-center font-mono font-bold text-slate-700 text-sm">
+                <span className="absolute inset-0 flex items-center justify-center font-mono font-bold text-slate-700 text-sm dark:text-slate-300">
                   {stableCount}
                 </span>
               </div>
-              <span className="text-[10px] font-bold text-slate-500 mt-1 uppercase">Stable</span>
+              <span className="text-[10px] font-bold text-slate-500 mt-1 uppercase dark:text-slate-400">Stable</span>
             </div>
           </div>
         </div>
 
         {/* Shield Mode Trigger */}
-        <div className="bg-indigo-50/40 border border-indigo-100/60 p-4 rounded-xl flex flex-col justify-between">
+        <div className="bg-indigo-50/40 border border-indigo-100/60 p-4 rounded-xl flex flex-col justify-between dark:bg-indigo-950/20 dark:border-indigo-900/40">
           <div>
-            <h3 className="font-bold text-xs uppercase tracking-wider text-indigo-600 mb-1.5 flex items-center gap-1.5">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-indigo-600 mb-1.5 flex items-center gap-1.5 dark:text-indigo-400">
               <Shield className="w-3.5 h-3.5" />
               Procrastination Shield
             </h3>
-            <p className="text-xs text-slate-600 font-medium leading-relaxed">
+            <p className="text-xs text-slate-600 font-medium leading-relaxed dark:text-slate-350">
               Activate **Deadline Shield Mode** to hide all distracting dashboard clutter, play deep work soundscapes, and lock in focus.
             </p>
           </div>
 
           <button
             onClick={() => setShieldMode(true)}
-            className="w-full mt-3 flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white text-xs font-bold rounded-xl shadow-md shadow-slate-100 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+            className="w-full mt-3 flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white text-xs font-bold rounded-xl shadow-md shadow-slate-100 dark:shadow-none hover:scale-[1.01] active:scale-95 transition-all cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border dark:border-slate-700"
             id="activate-shield-mode-btn"
           >
             <Shield className="w-4 h-4 text-rose-400" />

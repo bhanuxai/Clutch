@@ -136,16 +136,16 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex flex-col h-[400px]" id="voice-assistant-panel">
+    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex flex-col h-[400px] dark:bg-slate-900 dark:border-slate-800" id="voice-assistant-panel">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-50 flex-shrink-0">
+      <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-50 flex-shrink-0 dark:border-slate-800/60">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
+          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/60">
             <Bot className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="font-display text-base font-bold text-slate-950">AI Deadline Coach</h2>
-            <p className="text-xs text-slate-400 font-medium">Chat, dictate, or listen to proactive survival suggestions</p>
+            <h2 className="font-display text-base font-bold text-slate-950 dark:text-slate-50">AI Deadline Coach</h2>
+            <p className="text-xs text-slate-400 font-medium dark:text-slate-400">Chat, dictate, or listen to proactive survival suggestions</p>
           </div>
         </div>
 
@@ -157,8 +157,8 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
             }}
             className={`p-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
               isSpeaking
-                ? "bg-rose-50 border-rose-100 text-rose-600 animate-pulse"
-                : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                ? "bg-rose-50 border-rose-100 text-rose-600 animate-pulse dark:bg-rose-950/20 dark:border-rose-900/45 dark:text-rose-400"
+                : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-750"
             }`}
             title="Read aloud last coach response"
           >
@@ -181,10 +181,10 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
             {/* Avatar */}
             <div className={`p-1.5 rounded-lg flex-shrink-0 border ${
               msg.sender === "user" 
-                ? "bg-indigo-50 text-indigo-600 border-indigo-100" 
+                ? "bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/40" 
                 : msg.isAction 
-                  ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                  : "bg-slate-100 text-slate-600 border-slate-200"
+                  ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/40"
+                  : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
             }`}>
               {msg.sender === "user" ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
             </div>
@@ -192,10 +192,10 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
             {/* Message Bubble */}
             <div className={`p-3 rounded-2xl border ${
               msg.sender === "user"
-                ? "bg-indigo-600 text-white border-indigo-700 rounded-tr-none"
+                ? "bg-indigo-600 text-white border-indigo-700 rounded-tr-none dark:bg-indigo-700 dark:border-indigo-800"
                 : msg.isAction
-                  ? "bg-emerald-50/60 text-emerald-900 border-emerald-100 font-medium rounded-tl-none shadow-sm shadow-emerald-50"
-                  : "bg-slate-50 text-slate-800 border-slate-100 rounded-tl-none"
+                  ? "bg-emerald-50/60 text-emerald-900 border-emerald-100 font-medium rounded-tl-none shadow-sm shadow-emerald-50 dark:bg-emerald-950/10 dark:text-emerald-300 dark:border-emerald-900/40 dark:shadow-none"
+                  : "bg-slate-50 text-slate-800 border-slate-100 rounded-tl-none dark:bg-slate-800/40 dark:text-slate-200 dark:border-slate-800"
             }`}>
               <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
             </div>
@@ -203,10 +203,10 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
         ))}
         {isTyping && (
           <div className="flex items-start gap-2.5 max-w-[85%]">
-            <div className="p-1.5 rounded-lg border bg-slate-100 text-slate-600 border-slate-200">
+            <div className="p-1.5 rounded-lg border bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
               <Bot className="w-3.5 h-3.5" />
             </div>
-            <div className="p-3 rounded-2xl border bg-slate-50 text-slate-400 border-slate-100 rounded-tl-none flex items-center gap-1">
+            <div className="p-3 rounded-2xl border bg-slate-50 text-slate-400 border-slate-100 rounded-tl-none flex items-center gap-1 dark:bg-slate-800/40 dark:border-slate-850">
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
@@ -217,15 +217,15 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
       </div>
 
       {/* Input container */}
-      <div className="flex items-center gap-2 mt-auto flex-shrink-0 border-t border-slate-50 pt-3">
+      <div className="flex items-center gap-2 mt-auto flex-shrink-0 border-t border-slate-50 pt-3 dark:border-slate-800/60">
         {/* Simulate Voice Dictation */}
         <button
           onClick={handleVoiceSimulation}
-          className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 rounded-xl transition-all active:scale-95 cursor-pointer"
+          className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 rounded-xl transition-all active:scale-95 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-750 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           id="dictate-voice-simulation-btn"
           title="Simulate speech to text input"
         >
-          <Mic className="w-4 h-4 text-indigo-500 animate-pulse" />
+          <Mic className="w-4 h-4 text-indigo-500 animate-pulse dark:text-indigo-400" />
         </button>
 
         <input
@@ -234,7 +234,7 @@ export default function VoiceAssistant({ onTaskCreatedNotification }: VoiceAssis
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          className="flex-grow bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium focus:outline-none focus:bg-white focus:border-indigo-500 transition-colors"
+          className="flex-grow bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium focus:outline-none focus:bg-white focus:border-indigo-500 transition-colors dark:bg-slate-850 dark:border-slate-700 dark:focus:bg-slate-900 dark:text-slate-250 dark:focus:border-indigo-500"
           id="coach-chat-input"
         />
 

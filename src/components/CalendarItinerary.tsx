@@ -137,22 +137,22 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex flex-col gap-5" id="itinerary-panel">
+    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex flex-col gap-5 dark:bg-slate-900 dark:border-slate-800" id="itinerary-panel">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-50">
+      <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-50 dark:border-slate-800/60">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-rose-50 text-rose-500 rounded-lg border border-rose-100">
+          <div className="p-2 bg-rose-50 text-rose-500 rounded-lg border border-rose-100 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/40">
             <Calendar className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="font-display text-lg font-bold text-slate-950">AI Day-Planner</h2>
-            <p className="text-xs text-slate-400 font-medium">Your optimized hour-by-hour route to zero stress</p>
+            <h2 className="font-display text-lg font-bold text-slate-950 dark:text-slate-50">AI Day-Planner</h2>
+            <p className="text-xs text-slate-400 font-medium dark:text-slate-400">Your optimized hour-by-hour route to zero stress</p>
           </div>
         </div>
 
         <button
           onClick={() => setShowConfig(!showConfig)}
-          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer dark:text-indigo-400 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/60"
           id="configure-itinerary-btn"
         >
           {showConfig ? "Hide Config" : "Optimize Hours"}
@@ -160,7 +160,7 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
       </div>
 
       {/* Google Calendar Control Panel */}
-      <div className="bg-slate-50 border border-slate-100/80 rounded-xl p-4 text-xs" id="google-calendar-panel">
+      <div className="bg-slate-50 border border-slate-100/80 rounded-xl p-4 text-xs dark:bg-slate-800/40 dark:border-slate-800" id="google-calendar-panel">
         {isLoadingStatus ? (
           <div className="flex items-center justify-center py-2 text-slate-400 gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -171,38 +171,38 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
             <div className="flex items-start gap-2.5 text-slate-600">
               <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-slate-800 text-[13px] block mb-1">Google Calendar Setup Needed</span>
-                <p className="text-slate-500 leading-relaxed text-[11px]">
+                <span className="font-bold text-slate-800 text-[13px] block mb-1 dark:text-slate-200">Google Calendar Setup Needed</span>
+                <p className="text-slate-500 leading-relaxed text-[11px] dark:text-slate-400">
                   Integrate your real Google Calendar to schedule focus sessions and sync deadlocks. Provide client credentials in your AI Studio Secrets panel.
                 </p>
               </div>
             </div>
             
-            <div className="bg-white border border-slate-200/60 rounded-lg p-3 space-y-2 text-[10.5px]">
-              <div className="font-bold text-slate-700">1. Google Cloud Authorized Redirect URIs:</div>
-              <div className="font-mono text-slate-500 select-all break-all bg-slate-50 p-1.5 rounded border border-slate-100 leading-normal">
+            <div className="bg-white border border-slate-200/60 rounded-lg p-3 space-y-2 text-[10.5px] dark:bg-slate-900 dark:border-slate-700">
+              <div className="font-bold text-slate-700 dark:text-slate-300">1. Google Cloud Authorized Redirect URIs:</div>
+              <div className="font-mono text-slate-500 select-all break-all bg-slate-50 p-1.5 rounded border border-slate-100 leading-normal dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">
                 {window.location.origin}/auth/callback
               </div>
-              <div className="font-bold text-slate-700 mt-2">2. Register Variables:</div>
-              <p className="text-slate-500 leading-normal">
-                Add keys <code className="font-mono bg-slate-100 text-indigo-600 px-1 py-0.5 rounded font-bold">GOOGLE_CLIENT_ID</code> and <code className="font-mono bg-slate-100 text-indigo-600 px-1 py-0.5 rounded font-bold">GOOGLE_CLIENT_SECRET</code> to your app's secrets.
+              <div className="font-bold text-slate-700 mt-2 dark:text-slate-300">2. Register Variables:</div>
+              <p className="text-slate-500 leading-normal dark:text-slate-400">
+                Add keys <code className="font-mono bg-slate-100 text-indigo-600 px-1 py-0.5 rounded font-bold dark:bg-slate-800 dark:text-indigo-400">GOOGLE_CLIENT_ID</code> and <code className="font-mono bg-slate-100 text-indigo-600 px-1 py-0.5 rounded font-bold dark:bg-slate-800 dark:text-indigo-400">GOOGLE_CLIENT_SECRET</code> to your app's secrets.
               </p>
             </div>
           </div>
         ) : !gStatus.connected ? (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="space-y-0.5">
-              <div className="font-bold text-slate-800 text-[12px] flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+              <div className="font-bold text-slate-800 text-[12px] flex items-center gap-1.5 dark:text-slate-200">
+                <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></span>
                 Google Calendar Sync
               </div>
-              <p className="text-slate-500 text-[11px] leading-snug">
+              <p className="text-slate-500 text-[11px] leading-snug dark:text-slate-400">
                 Connect your calendar to sync your schedule with full user permission.
               </p>
             </div>
             <button
               onClick={handleConnectGoogle}
-              className="flex items-center gap-1.5 px-3 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-lg transition-colors cursor-pointer self-stretch sm:self-auto text-center justify-center shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-lg transition-colors cursor-pointer self-stretch sm:self-auto text-center justify-center shadow-sm dark:shadow-none"
             >
               <Calendar className="w-3.5 h-3.5" />
               Link Calendar
@@ -211,15 +211,16 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
         ) : (
           <div className="space-y-3">
             {/* Status Line */}
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200/50 pb-2">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200/50 pb-2 dark:border-slate-700">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 <div>
-                  <span className="font-bold text-slate-800 text-[12px] block leading-none">Linked with Google Calendar</span>
-                  <span className="text-slate-400 text-[10px]">{gStatus.email}</span>
+                  <span className="font-bold text-slate-800 text-[12px] block leading-none dark:text-slate-200">Linked with Google Calendar</span>
+                  <span className="text-slate-400 text-[10px] dark:text-slate-500">{gStatus.email}</span>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={handleDisconnectGoogle}
                 className="text-slate-400 hover:text-rose-500 transition-colors p-1"
                 title="Disconnect Google account"
@@ -232,9 +233,10 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
             {itinerary && itinerary.length > 0 && (
               <div className="flex flex-col gap-2">
                 <button
+                  type="button"
                   onClick={handleSyncItinerary}
                   disabled={isSyncingItinerary}
-                  className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-700 font-bold rounded-lg transition-all disabled:opacity-50 cursor-pointer text-[11px]"
+                  className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-700 font-bold rounded-lg transition-all disabled:opacity-50 cursor-pointer text-[11px] dark:bg-indigo-950/40 dark:hover:bg-indigo-950/60 dark:border-indigo-900/40 dark:text-indigo-400"
                 >
                   {isSyncingItinerary ? (
                     <>
@@ -254,8 +256,8 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
             {syncMessage && (
               <div className={`p-2.5 rounded-lg border text-[11px] font-medium leading-relaxed ${
                 syncMessage.type === "success" 
-                  ? "bg-emerald-50 border-emerald-100 text-emerald-800" 
-                  : "bg-rose-50 border-rose-100 text-rose-800"
+                  ? "bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900/40 dark:text-emerald-400" 
+                  : "bg-rose-50 border-rose-100 text-rose-800 dark:bg-rose-950/20 dark:border-rose-900/40 dark:text-rose-450"
               }`}>
                 {syncMessage.text}
               </div>
@@ -264,7 +266,7 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
             {/* Live Calendar feed preview */}
             {gEvents && gEvents.length > 0 && (
               <div className="space-y-2 mt-2">
-                <div className="font-bold text-slate-600 text-[10px] uppercase tracking-wider">Upcoming Real-time Events:</div>
+                <div className="font-bold text-slate-600 text-[10px] uppercase tracking-wider dark:text-slate-400">Upcoming Real-time Events:</div>
                 <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
                   {gEvents.map((evt) => {
                     const dateObj = evt.start?.dateTime ? new Date(evt.start.dateTime) : null;
@@ -272,9 +274,9 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
                       ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
                       : "All Day";
                     return (
-                      <div key={evt.id} className="flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-100 text-[11px] text-slate-700 shadow-3xs">
-                        <span className="font-semibold truncate max-w-[150px]">{evt.summary || "(No Title)"}</span>
-                        <span className="font-mono text-slate-400 text-[10px] flex-shrink-0">{timeStr}</span>
+                      <div key={evt.id} className="flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-100 text-[11px] text-slate-700 shadow-3xs dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:shadow-none">
+                        <span className="font-semibold truncate max-w-[150px] dark:text-slate-250">{evt.summary || "(No Title)"}</span>
+                        <span className="font-mono text-slate-400 text-[10px] flex-shrink-0 dark:text-slate-500">{timeStr}</span>
                       </div>
                     );
                   })}
@@ -287,23 +289,23 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
 
       {/* Config Form */}
       {showConfig && (
-        <form onSubmit={handleRegenerate} className="bg-slate-50 border border-slate-100 p-4 rounded-xl text-xs flex flex-wrap items-end gap-3" id="itinerary-config-form">
+        <form onSubmit={handleRegenerate} className="bg-slate-50 border border-slate-100 p-4 rounded-xl text-xs flex flex-wrap items-end gap-3 dark:bg-slate-800/40 dark:border-slate-800" id="itinerary-config-form">
           <div className="flex-1 min-w-[100px]">
-            <label className="block text-slate-500 font-bold mb-1 uppercase tracking-wider text-[9px]">Start Day Hour</label>
+            <label className="block text-slate-500 font-bold mb-1 uppercase tracking-wider text-[9px] dark:text-slate-400">Start Day Hour</label>
             <input
               type="time"
               value={startHour}
               onChange={(e) => setStartHour(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-medium focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-medium focus:outline-none focus:border-indigo-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200"
             />
           </div>
           <div className="flex-1 min-w-[100px]">
-            <label className="block text-slate-500 font-bold mb-1 uppercase tracking-wider text-[9px]">End Day Hour</label>
+            <label className="block text-slate-500 font-bold mb-1 uppercase tracking-wider text-[9px] dark:text-slate-400">End Day Hour</label>
             <input
               type="time"
               value={endHour}
               onChange={(e) => setEndHour(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-medium focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-medium focus:outline-none focus:border-indigo-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200"
             />
           </div>
           <button
@@ -318,30 +320,30 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
       )}
 
       {/* Timeline List */}
-      <div className="relative border-l border-slate-100 pl-4 ml-2.5 space-y-4 py-2" id="itinerary-timeline">
+      <div className="relative border-l border-slate-100 pl-4 ml-2.5 space-y-4 py-2 dark:border-slate-800" id="itinerary-timeline">
         {itinerary && itinerary.length > 0 ? (
           itinerary.map((item, idx) => (
             <div key={idx} className="relative group" id={`itinerary-item-${idx}`}>
               {/* Bullet indicator */}
-              <span className={`absolute -left-[21px] top-1.5 w-3 h-3 rounded-full border-2 bg-white transition-transform group-hover:scale-125 ${
+              <span className={`absolute -left-[21px] top-1.5 w-3 h-3 rounded-full border-2 bg-white transition-transform group-hover:scale-125 dark:bg-slate-900 ${
                 item.isBuffer 
-                  ? "border-emerald-500 ring-4 ring-emerald-50/50" 
-                  : "border-indigo-500 ring-4 ring-indigo-50/30"
+                  ? "border-emerald-500 ring-4 ring-emerald-50/50 dark:ring-emerald-950/40" 
+                  : "border-indigo-500 ring-4 ring-indigo-50/30 dark:ring-indigo-950/20"
               }`}></span>
 
               {/* Box */}
               <div className={`p-3.5 rounded-xl border transition-all ${
                 item.isBuffer 
-                  ? "bg-emerald-50/40 border-emerald-100/60 text-emerald-950" 
-                  : "bg-slate-50/50 border-slate-100/60 text-slate-950"
+                  ? "bg-emerald-50/40 border-emerald-100/60 text-emerald-950 dark:bg-emerald-950/10 dark:border-emerald-900/40 dark:text-emerald-100" 
+                  : "bg-slate-50/50 border-slate-100/60 text-slate-950 dark:bg-slate-800/20 dark:border-slate-850/60 dark:text-slate-50"
               }`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
-                  <span className="font-mono text-xs font-bold text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-md shadow-sm w-fit">
+                  <span className="font-mono text-xs font-bold text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-md shadow-sm w-fit dark:text-slate-400 dark:bg-slate-900 dark:border-slate-850">
                     {item.time}
                   </span>
                   
                   {item.isBuffer && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wider w-fit">
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wider w-fit dark:text-emerald-400 dark:bg-emerald-950/40">
                       <Smile className="w-3.5 h-3.5" />
                       Recovery Buffer
                     </span>
@@ -354,7 +356,7 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
 
                 {item.focusTip && (
                   <p className={`text-[11px] font-medium mt-1.5 italic ${
-                    item.isBuffer ? "text-emerald-700/80" : "text-slate-500/80"
+                    item.isBuffer ? "text-emerald-700/80 dark:text-emerald-400/80" : "text-slate-500/80 dark:text-slate-400/80"
                   }`}>
                     💡 Focus Tip: {item.focusTip}
                   </p>
@@ -363,18 +365,18 @@ export default function CalendarItinerary({ itinerary, isGenerating, onGenerate 
             </div>
           ))
         ) : (
-          <div className="text-center py-6 text-slate-400 font-medium" id="empty-itinerary">
-            <Compass className="w-8 h-8 mx-auto mb-2 text-slate-300 animate-bounce" />
+          <div className="text-center py-6 text-slate-400 font-medium dark:text-slate-500" id="empty-itinerary">
+            <Compass className="w-8 h-8 mx-auto mb-2 text-slate-300 animate-bounce dark:text-slate-700" />
             <p className="text-xs">No AI schedule built yet.</p>
-            <p className="text-[10px] mt-1 text-slate-400">Click &apos;Optimize Hours&apos; to trigger a plan!</p>
+            <p className="text-[10px] mt-1 text-slate-400 dark:text-slate-500">Click &apos;Optimize Hours&apos; to trigger a plan!</p>
           </div>
         )}
       </div>
 
       {/* End of day anchor */}
       {itinerary && itinerary.length > 0 && (
-        <div className="flex items-center gap-2 text-slate-400 text-xs pl-3 mt-1 font-mono font-medium" id="timeline-end-anchor">
-          <Moon className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="flex items-center gap-2 text-slate-400 text-xs pl-3 mt-1 font-mono font-medium dark:text-slate-500" id="timeline-end-anchor">
+          <Moon className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-500" />
           <span>Day schedule complete. Sleep is the ultimate cognitive shield.</span>
         </div>
       )}

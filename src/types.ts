@@ -9,6 +9,9 @@ export interface Task {
   notes: string;
   aiScore?: number;
   aiRecommendation?: string;
+  googleEventId?: string;
+  tags?: string[];
+  completedAt?: string; // ISO string when completed
 }
 
 export interface Habit {
